@@ -21,11 +21,13 @@ import {
   Menu,
   X,
   ChevronRight,
+  Download
 } from "lucide-react";
 
 import FileCard from "../components/FileCard";
 import FolderCard from "../components/FolderCard";
 import Breadcrumbs from "../components/Breadcrumbs";
+import UploadDropzone from "../components/UploadDropzone";
 
 import {
   getCurrentUser,
@@ -43,6 +45,7 @@ function Dashboard() {
   const [files, setFiles] = useState([]);
 
   const [path, setPath] = useState([]);
+  const [storageUsed, setStorageUsed] = useState(0);
 
   const [
     currentFolderId,
@@ -63,6 +66,15 @@ function Dashboard() {
 
   const fileInputRef = useRef(null);
 
+  const [showUpload, setShowUpload] =
+  useState(false);
+
+  const [previewFile, setPreviewFile] =
+  useState(null);
+
+    function openPreview(file) {
+  setPreviewFile(file);
+}
 
   // ==========================================
   // LOAD ROOT
@@ -100,9 +112,25 @@ function Dashboard() {
       );
 
 
-      setFiles(
-        contents?.children?.files || []
-      );
+      
+
+      const loadedFiles =
+  contents?.children?.files || [];
+  setFiles(loadedFiles);
+
+const totalBytes = loadedFiles.reduce(
+  (total, file) =>
+    total +
+    Number(
+      file.size_bytes ||
+      file.size ||
+      file.file_size ||
+      0
+    ),
+  0
+);
+
+setStorageUsed(totalBytes);
 
 
       setPath(
@@ -360,31 +388,10 @@ function Dashboard() {
   // UPLOAD
   // ==========================================
 
-  function chooseUpload() {
+ function chooseUpload() {
+  setShowUpload(true);
+}
 
-    fileInputRef
-      .current
-      ?.click();
-  }
-
-
-  function handleUploadSelection(event) {
-
-    const selected =
-      event.target.files?.[0];
-
-    if (!selected) {
-      return;
-    }
-
-
-    alert(
-      `"${selected.name}" selected. Upload will be connected on Day 10.`
-    );
-
-
-    event.target.value = "";
-  }
 
 
   // ==========================================
@@ -553,6 +560,29 @@ function Dashboard() {
 
       </div>
     );
+  }
+
+   const STORAGE_LIMIT = 1024 * 1024 * 1024; // 1 GB
+
+  const storagePercentage = Math.min(
+    (storageUsed / STORAGE_LIMIT) * 100,
+    100
+  );
+
+  function formatStorage(bytes) {
+    if (bytes === 0) {
+      return "0 GB";
+    }
+
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 
 
@@ -921,7 +951,7 @@ function Dashboard() {
                       <div className="mt-2 flex items-end gap-2">
 
                         <span className="text-4xl font-black">
-                          0 GB
+                          {formatStorage(storageUsed)}
                         </span>
 
                         <span className="text-sm text-gray-600 mb-1">
@@ -947,14 +977,20 @@ function Dashboard() {
 
                   <div className="mt-6 h-2 rounded-full bg-white/[0.05] overflow-hidden">
 
-                    <div className="h-full w-0 bg-gradient-to-r from-lime-300 to-fuchsia-400" />
-
+                    <div
+    className="h-full bg-gradient-to-r from-lime-300 to-fuchsia-400 transition-all duration-500"
+    style={{
+      width: `${storagePercentage}%`,
+    }}
+  />
                   </div>
 
 
                   <p className="text-xs text-gray-600 mt-3">
-                    Storage usage will appear here.
-                  </p>
+  {storageUsed === 0
+    ? "No storage used yet."
+    : `${storagePercentage.toFixed(1)}% of your 1 GB storage used.`}
+</p>
 
                 </div>
 
@@ -1001,14 +1037,7 @@ function Dashboard() {
                 </button>
 
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={
-                    handleUploadSelection
-                  }
-                />
+                
 
               </div>
 
@@ -1306,6 +1335,7 @@ function Dashboard() {
                                   file={
                                     file
                                   }
+                                    onPreview={openPreview}
                                 />
 
                               )
@@ -1332,6 +1362,269 @@ function Dashboard() {
         </main>
 
       </div>
+     
+
+    {showUpload && (
+      <UploadDropzone
+        folderId={currentFolderId}
+        onClose={() => setShowUpload(false)}
+        onUploadComplete={async () => {
+          await loadRoot();
+        }}
+      />
+    )}
+
+    {previewFile && (
+
+  <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+
+    {/* BACKDROP */}
+
+    <div
+      className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      onClick={() =>
+        setPreviewFile(null)
+      }
+    />
+
+
+    {/* MODAL */}
+
+    <div className="
+      relative
+      w-full
+      max-w-5xl
+      max-h-[90vh]
+      rounded-3xl
+      border
+      border-white/10
+      bg-[#0d0717]
+      shadow-2xl
+      overflow-hidden
+      flex
+      flex-col
+    ">
+
+
+      {/* HEADER */}
+
+      <div className="
+        px-5
+        py-4
+        border-b
+        border-white/10
+        flex
+        items-center
+        justify-between
+        gap-4
+      ">
+
+        <div className="min-w-0">
+
+          <h2 className="font-semibold text-white truncate">
+            {previewFile.name}
+          </h2>
+
+          <p className="text-xs text-gray-600 mt-1">
+            File preview
+          </p>
+
+        </div>
+
+
+        <div className="flex items-center gap-2">
+
+          {previewFile.url && (
+
+            <a
+              href={previewFile.url}
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="
+                p-2.5
+                rounded-xl
+                border
+                border-white/10
+                text-gray-500
+                hover:text-lime-300
+                transition
+              "
+              title="Download"
+            >
+
+              <Download
+                size={18}
+              />
+
+            </a>
+
+          )}
+
+
+          <button
+            type="button"
+            onClick={() =>
+              setPreviewFile(null)
+            }
+            className="
+              p-2.5
+              rounded-xl
+              border
+              border-white/10
+              text-gray-500
+              hover:text-white
+              transition
+            "
+          >
+
+            <X size={19} />
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {/* PREVIEW */}
+
+      <div className="
+        flex-1
+        min-h-[400px]
+        max-h-[75vh]
+        overflow-auto
+        flex
+        items-center
+        justify-center
+        bg-black/20
+        p-5
+      ">
+
+
+        {/* IMAGE */}
+
+        {(
+          previewFile.mime_type ||
+          previewFile.mimeType ||
+          ""
+        ).startsWith("image/") &&
+        previewFile.url && (
+
+          <img
+            src={previewFile.url}
+            alt={previewFile.name}
+            className="
+              max-w-full
+              max-h-[68vh]
+              object-contain
+              rounded-xl
+            "
+          />
+
+        )}
+
+
+        {/* PDF */}
+
+        {(
+          previewFile.mime_type ===
+            "application/pdf" ||
+          previewFile.mimeType ===
+            "application/pdf" ||
+          previewFile.name
+            ?.toLowerCase()
+            .endsWith(".pdf")
+        ) &&
+        previewFile.url && (
+
+          <iframe
+            src={previewFile.url}
+            title={previewFile.name}
+            className="
+              w-full
+              h-[68vh]
+              rounded-xl
+              border
+              border-white/10
+              bg-white
+            "
+          />
+
+        )}
+
+
+        {/* TEXT */}
+
+        {(
+          previewFile.mime_type ||
+          previewFile.mimeType ||
+          ""
+        ).startsWith("text/") &&
+        previewFile.url && (
+
+          <iframe
+            src={previewFile.url}
+            title={previewFile.name}
+            className="
+              w-full
+              h-[68vh]
+              rounded-xl
+              border
+              border-white/10
+              bg-[#10091a]
+            "
+          />
+
+        )}
+
+
+        {/* OTHER */}
+
+        {!previewFile.url && (
+
+          <div className="text-center">
+
+            <div className="
+              w-20
+              h-20
+              mx-auto
+              rounded-3xl
+              bg-fuchsia-400/[0.07]
+              border
+              border-fuchsia-400/15
+              flex
+              items-center
+              justify-center
+              mb-5
+            ">
+
+              <Files
+                size={32}
+                className="text-fuchsia-300"
+              />
+
+            </div>
+
+            <p className="text-gray-300 font-semibold">
+              Preview unavailable
+            </p>
+
+            <p className="text-sm text-gray-600 mt-2">
+              This file does not have a preview URL yet.
+            </p>
+
+          </div>
+
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
 
     </div>
   );
