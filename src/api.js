@@ -124,6 +124,16 @@ export async function getCurrentUser() {
   return request("/api/auth/me");
 }
 
+export async function getUserByEmail(email) {
+  const params = new URLSearchParams({
+    email: email.trim(),
+  });
+
+  return request(
+    `/api/auth/by-email?${params.toString()}`
+  );
+}
+
 /* =========================================================
    FOLDERS
 ========================================================= */
@@ -210,6 +220,7 @@ export async function getFiles(folderId = null) {
 
   return request(`/api/files${query}`);
 }
+
 
 
 /* =========================================================
@@ -352,5 +363,108 @@ export async function shareResource(
       granteeUserId,
       role,
     }),
+  });
+}
+
+export async function getSharedFiles() {
+  return request("/api/shares");
+}
+
+/* =========================================================
+   USER SEARCH
+========================================================= */
+
+export async function findUserByEmail(email) {
+  const params = new URLSearchParams({
+    email: email.trim(),
+  });
+
+  return request(
+    `/api/auth/by-email?${params.toString()}`
+  );
+}
+
+
+/* =========================================================
+   RECEIVED SHARES
+========================================================= */
+
+export async function getSharedWithMe() {
+  return request("/api/shares/received");
+}
+
+
+/* =========================================================
+   PUBLIC LINKS
+========================================================= */
+
+export async function createPublicLink(
+  resourceType,
+  resourceId
+) {
+  return request("/api/shares/link", {
+    method: "POST",
+    body: JSON.stringify({
+      resourceType,
+      resourceId,
+    }),
+  });
+}
+
+export async function getPublicLinks(
+  resourceType,
+  resourceId
+) {
+  return request(
+    `/api/shares/link/${resourceType}/${resourceId}`
+  );
+}
+
+export async function deletePublicLink(linkId) {
+  return request(`/api/shares/link/${linkId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getResourceShares(
+  resourceType,
+  resourceId
+) {
+  return request(
+    `/api/shares/${resourceType}/${resourceId}`
+  );
+}
+
+export async function updateShare(
+  shareId,
+  role
+) {
+  return request(`/api/shares/${shareId}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      role,
+    }),
+  });
+}
+
+
+export async function deleteShare(shareId) {
+  return request(`/api/shares/${shareId}`, {
+    method: "DELETE",
+  });
+}
+
+/* =========================================================
+   PUBLIC LINK VIEWER (no auth — anyone with the link)
+========================================================= */
+
+export async function getPublicLinkInfo(token) {
+  return request(`/api/public/${token}`);
+}
+
+export async function verifyPublicLinkPassword(token, password) {
+  return request(`/api/public/${token}/verify`, {
+    method: "POST",
+    body: JSON.stringify({ password }),
   });
 }

@@ -5,6 +5,7 @@ import {
   FileType,
   Download,
   Eye,
+  Share2
 } from "lucide-react";
 
 function getFileType(file) {
@@ -75,6 +76,7 @@ function getIcon(type) {
 function FileCard({
   file,
   onPreview,
+  onShare,
 }) {
 
   const type =
@@ -91,8 +93,8 @@ function FileCard({
 
   return (
 
-    <button
-      type="button"
+    <div
+      
       onClick={() => {
 
         if (onPreview) {
@@ -194,21 +196,59 @@ function FileCard({
 
       <div className="px-4 py-3">
 
-        <p className="text-sm text-gray-200 font-medium truncate">
-          {file?.name || "Unnamed file"}
-        </p>
+  <p className="text-sm text-gray-200 font-medium truncate">
+    {file?.name || "Unnamed file"}
+  </p>
 
-        {size && (
+  {size && (
+    <p className="text-xs text-gray-600 mt-1">
+      {formatFileSize(size)}
+    </p>
+  )}
 
-          <p className="text-xs text-gray-600 mt-1">
-            {formatFileSize(size)}
-          </p>
+  <div className="flex items-center justify-between gap-2 mt-3">
 
-        )}
+    <span className="text-xs text-gray-600">
+      Click to preview
+    </span>
 
-      </div>
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+
+        if (onShare) {
+          onShare(file);
+        }
+      }}
+      className="
+        flex
+        items-center
+        gap-1.5
+        px-2.5
+        py-1.5
+        rounded-lg
+        border
+        border-white/10
+        text-gray-500
+        hover:text-lime-300
+        hover:border-lime-300/20
+        transition
+      "
+    >
+      <Share2 size={14} />
+
+      <span className="text-xs">
+        Share
+      </span>
 
     </button>
+
+  </div>
+
+</div>
+
+    </div>
   );
 }
 

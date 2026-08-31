@@ -21,7 +21,9 @@ import {
   Menu,
   X,
   ChevronRight,
-  Download
+  Download,
+  
+  Copy
 } from "lucide-react";
 
 import FileCard from "../components/FileCard";
@@ -32,7 +34,18 @@ import UploadDropzone from "../components/UploadDropzone";
 import {
   getCurrentUser,
   getFolder,
+  getFile,
   getRootContents,
+  createPublicLink,
+  getResourceShares,
+updateShare,
+deleteShare,
+getPublicLinks,
+deletePublicLink,
+   getUserByEmail,
+  shareResource,
+  getSharedFiles,
+
 } from "../api";
 
 
@@ -51,6 +64,24 @@ function Dashboard() {
     currentFolderId,
     setCurrentFolderId,
   ] = useState(null);
+
+  const [shareFile, setShareFile] = useState(null);
+  const [shareEmail, setShareEmail] = useState("");
+const [shareRole, setShareRole] = useState("viewer");
+const [sharing, setSharing] = useState(false);
+const [shareMessage, setShareMessage] = useState("");
+
+const [sharedFiles, setSharedFiles] = useState([]);
+const [sharedLoading, setSharedLoading] = useState(false);
+const [sharedError, setSharedError] = useState("");
+
+const [resourceShares, setResourceShares] = useState([]);
+const [loadingShares, setLoadingShares] = useState(false);
+
+const [publicLink, setPublicLink] = useState("");
+const [creatingPublicLink, setCreatingPublicLink] = useState(false);
+
+const [publicLinkId, setPublicLinkId] = useState(null);
 
   const [search, setSearch] = useState("");
 
@@ -74,6 +105,84 @@ function Dashboard() {
 
     function openPreview(file) {
   setPreviewFile(file);
+}
+
+function openPreview(file) {
+  setPreviewFile(file);
+}
+
+async function openSharedFile(file) {
+  try {
+    const response = await getFile(file.id);
+
+    const url = response?.downloadUrl;
+
+    if (!url) {
+      throw new Error("File download URL was not returned.");
+    }
+
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Open shared file error:",
+      error
+    );
+
+    setShareMessage(
+      error.message ||
+      "Unable to open shared file."
+    );
+  }
+}
+
+async function openShare(file) {
+  setShareFile(file);
+
+  setShareMessage("");
+
+  setPublicLink("");
+  setPublicLinkId(null);
+
+  setResourceShares([]);
+
+  await loadResourceShares(file.id);
+
+  try {
+    const response = await getPublicLinks(
+      "file",
+      file.id
+    );
+
+    const links =
+  response?.links || [];
+
+if (links.length > 0) {
+  const latestLink = links[0];
+
+  setPublicLink(
+    latestLink.link ||
+    ""
+  );
+
+  setPublicLinkId(
+    latestLink.id ||
+    null
+  );
+}
+
+  } catch (error) {
+
+    console.error(
+      "Load public links error:",
+      error
+    );
+  }
 }
 
   // ==========================================
@@ -156,6 +265,62 @@ setStorageUsed(totalBytes);
     }
   }
 
+  const loadResourceShares = async (fileId) => {
+  try {
+    setLoadingShares(true);
+
+    const response = await getResourceShares(
+      "file",
+      fileId
+    );
+
+    setResourceShares(
+      response?.shares ||
+      response ||
+      []
+    );
+
+  } catch (error) {
+    console.error(
+      "Failed to load shares:",
+      error
+    );
+
+    setResourceShares([]);
+  } finally {
+    setLoadingShares(false);
+  }
+};
+
+  async function loadSharedFiles() {
+  setSharedLoading(true);
+  setSharedError("");
+
+  try {
+    const response = await getSharedFiles();
+
+    setSharedFiles(
+      response?.files || []
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Load shared files error:",
+      error
+    );
+
+    setSharedError(
+      error.message ||
+      "Could not load shared files."
+    );
+
+  } finally {
+
+    setSharedLoading(false);
+
+  }
+}
 
   // ==========================================
   // OPEN FOLDER
@@ -379,8 +544,12 @@ setStorageUsed(totalBytes);
 
     if (id === "shared") {
 
-      return;
-    }
+  setSearch("");
+
+  loadSharedFiles();
+
+  return;
+}
   }
 
 
@@ -891,40 +1060,246 @@ setStorageUsed(totalBytes);
 
             {active === "shared" && (
 
-              <div className="min-h-[60vh] flex items-center justify-center">
+  <div className="mb-8">
 
-                <div className="text-center max-w-md">
+    <div className="mb-7">
 
-                  <div className="w-16 h-16 mx-auto rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/[0.06] flex items-center justify-center mb-5">
+      <p className="text-lime-300 text-xs tracking-[0.28em] font-semibold mb-2">
+        CLOUDNOVA
+      </p>
 
-                    <Share2
-                      size={28}
-                      className="text-fuchsia-300"
-                    />
+      <h1 className="text-3xl sm:text-4xl font-black">
+        Shared Files
+      </h1>
 
-                  </div>
+      <p className="text-gray-500 mt-2">
+        Files that have been shared with you.
+      </p>
 
-                  <h1 className="text-2xl font-bold">
-                    Shared Files
-                  </h1>
+    </div>
 
-                  <p className="text-gray-500 mt-3">
-                    File sharing and permissions will be connected during Day 11.
-                  </p>
 
-                  <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm text-gray-500">
+    <div className="
+      rounded-2xl
+      border
+      border-white/10
+      bg-[#0d0717]
+      overflow-hidden
+    ">
 
-                    Coming soon
+      <div className="px-5 sm:px-7 py-5 border-b border-white/10">
 
-                    <ChevronRight size={15} />
+        <h2 className="text-xl font-bold">
+          Shared with me
+        </h2>
 
-                  </div>
+        <p className="text-sm text-gray-600 mt-1">
+          View and download files shared with your account.
+        </p>
+
+      </div>
+
+
+      <div className="p-5 sm:p-7">
+
+        {sharedLoading && (
+
+          <div className="py-16 text-center text-gray-600">
+
+            <RefreshCw
+              size={22}
+              className="mx-auto animate-spin mb-3"
+            />
+
+            Loading shared files...
+
+          </div>
+
+        )}
+
+
+        {!sharedLoading && sharedError && (
+
+          <div className="py-12 text-center">
+
+            <AlertCircle
+              size={26}
+              className="mx-auto text-fuchsia-400 mb-3"
+            />
+
+            <p className="text-gray-300 font-medium">
+              Could not load shared files
+            </p>
+
+            <p className="text-sm text-gray-600 mt-2">
+              {sharedError}
+            </p>
+
+            <button
+              type="button"
+              onClick={loadSharedFiles}
+              className="
+                mt-5
+                px-4
+                py-2.5
+                rounded-xl
+                bg-lime-300
+                text-black
+                font-semibold
+                text-sm
+              "
+            >
+              Try again
+            </button>
+
+          </div>
+
+        )}
+
+
+        {!sharedLoading &&
+          !sharedError &&
+          sharedFiles.length === 0 && (
+
+          <div className="py-16 text-center">
+
+            <Share2
+              size={38}
+              className="mx-auto text-gray-700 mb-4"
+            />
+
+            <p className="text-gray-300 font-medium">
+              No shared files yet
+            </p>
+
+            <p className="text-sm text-gray-600 mt-2">
+              Files shared with you will appear here.
+            </p>
+
+          </div>
+
+        )}
+
+
+        {!sharedLoading &&
+          !sharedError &&
+          sharedFiles.length > 0 && (
+
+          <div className="
+            grid
+            grid-cols-2
+            sm:grid-cols-3
+            lg:grid-cols-4
+            xl:grid-cols-5
+            gap-3
+          ">
+
+            {sharedFiles.map((file) => (
+
+              <div
+                key={file.id}
+                className="
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-white/[0.02]
+                  p-4
+                  hover:border-lime-300/20
+                  transition
+                "
+              >
+
+                <div className="
+                  w-12
+                  h-12
+                  rounded-xl
+                  bg-fuchsia-400/[0.07]
+                  border
+                  border-fuchsia-400/15
+                  flex
+                  items-center
+                  justify-center
+                  mb-4
+                ">
+
+                  <Files
+                    size={22}
+                    className="text-fuchsia-300"
+                  />
 
                 </div>
 
+
+                <p className="
+                  text-sm
+                  font-semibold
+                  text-white
+                  truncate
+                ">
+                  {file.name}
+                </p>
+
+
+                <p className="
+                  text-xs
+                  text-gray-600
+                  mt-2
+                ">
+                  {file.role === "editor"
+                    ? "Editor"
+                    : "Viewer"}
+                </p>
+
+
+                {file.shared_by_email && (
+
+                  <p className="
+                    text-[11px]
+                    text-gray-700
+                    mt-1
+                    truncate
+                  ">
+                    Shared by {file.shared_by_email}
+                  </p>
+
+                )}
+
+
+                <button
+                  type="button"
+                  onClick={() => openSharedFile(file)}
+                  className="
+                    w-full
+                    mt-4
+                    py-2
+                    rounded-lg
+                    border
+                    border-white/10
+                    text-xs
+                    text-gray-400
+                    hover:text-lime-300
+                    hover:border-lime-300/20
+                    transition
+                  "
+                >
+                  View File
+                </button>
+
               </div>
 
-            )}
+            ))}
+
+          </div>
+
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
 
 
             {/* =================================
@@ -1336,6 +1711,7 @@ setStorageUsed(totalBytes);
                                     file
                                   }
                                     onPreview={openPreview}
+                                    onShare={openShare}
                                 />
 
                               )
@@ -1617,6 +1993,602 @@ setStorageUsed(totalBytes);
           </div>
 
         )}
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
+    {shareFile && (
+
+  <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+
+    {/* BACKDROP */}
+
+    <div
+      className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      onClick={() =>
+        setShareFile(null)
+      }
+    />
+
+    {/* MODAL */}
+
+    <div
+      className="
+        relative
+        w-full
+        max-w-lg
+        rounded-3xl
+        border
+        border-white/10
+        bg-[#0d0717]
+        shadow-2xl
+        overflow-hidden
+      "
+    >
+
+      {/* HEADER */}
+
+      <div className="
+        px-6
+        py-5
+        border-b
+        border-white/10
+        flex
+        items-center
+        justify-between
+      ">
+
+        <div className="min-w-0">
+
+          <div className="flex items-center gap-2">
+
+            <Share2
+              size={19}
+              className="text-lime-300"
+            />
+
+            <h2 className="text-xl font-bold text-white">
+              Share File
+            </h2>
+
+          </div>
+
+          <p className="text-sm text-gray-500 mt-1 truncate">
+            {shareFile.name}
+          </p>
+
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            setShareFile(null)
+          }
+          className="
+            p-2
+            rounded-xl
+            text-gray-500
+            hover:text-white
+            hover:bg-white/[0.05]
+          "
+        >
+          <X size={19} />
+        </button>
+
+      </div>
+
+
+      {/* BODY */}
+
+      <div className="p-6">
+
+        {/* EMAIL */}
+
+        <label className="
+          block
+          text-sm
+          font-medium
+          text-gray-300
+          mb-2
+        ">
+          Share with
+        </label>
+
+        <input
+  type="email"
+  value={shareEmail}
+  onChange={(e) =>
+    setShareEmail(e.target.value)
+  }
+  placeholder="Enter user's email"
+  className="
+    w-full
+    h-12
+    rounded-xl
+    border
+    border-white/10
+    bg-white/[0.03]
+    px-4
+    text-sm
+    text-white
+    placeholder:text-gray-700
+    outline-none
+    focus:border-lime-300/30
+  "
+/>
+
+
+
+        {/* PERMISSION */}
+
+        <label className="
+          block
+          text-sm
+          font-medium
+          text-gray-300
+          mt-5
+          mb-2
+        ">
+          Permission
+        </label>
+
+        <select
+          value={shareRole}
+  onChange={(e) =>
+    setShareRole(e.target.value)
+  }
+          className="
+            w-full
+            h-12
+            rounded-xl
+            border
+            border-white/10
+            bg-[#120b1c]
+            px-4
+            text-sm
+            text-gray-300
+            outline-none
+            focus:border-lime-300/30
+          "
+        >
+
+          <option value="viewer">
+            Viewer — can view and download
+          </option>
+
+          <option value="editor">
+            Editor — can modify
+          </option>
+
+        </select>
+
+
+        {/* SHARE BUTTON */}
+
+        <button
+  type="button"
+  disabled={sharing}
+  onClick={async () => {
+  try {
+    const email = shareEmail.trim();
+
+    if (!email) {
+      setShareMessage("Please enter an email address.");
+      return;
+    }
+
+    setSharing(true);
+    setShareMessage("");
+
+    // 1. Find the user using their email
+    const userResponse =
+      await getUserByEmail(email);
+
+    const granteeUserId =
+      userResponse?.user?.id;
+
+    if (!granteeUserId) {
+      throw new Error("User not found.");
+    }
+
+    // 2. Create the share
+    await shareResource(
+      "file",
+      shareFile.id,
+      granteeUserId,
+      shareRole
+    );
+
+    await loadResourceShares(shareFile.id);
+
+    setShareMessage(
+      `File shared successfully with ${email}`
+    );
+
+    setShareEmail("");
+
+  } catch (error) {
+
+    console.error("Share error:", error);
+
+    setShareMessage(
+      error.message ||
+      "Failed to share file."
+    );
+
+  } finally {
+
+    setSharing(false);
+
+  }
+}}
+  className="
+    w-full
+    h-12
+    mt-6
+    rounded-xl
+    bg-lime-300
+    text-black
+    font-bold
+    flex
+    items-center
+    justify-center
+    gap-2
+    hover:bg-lime-200
+    transition
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+  "
+>
+  <Share2 size={18} />
+
+  {sharing ? "Sharing..." : "Share File"}
+</button>
+
+{shareMessage && (
+  <p className="mt-3 text-sm text-gray-400 text-center">
+    {shareMessage}
+  </p>
+)}
+
+<div className="mt-6">
+
+  <p className="text-sm font-medium text-gray-300">
+    People with access
+  </p>
+
+  {loadingShares ? (
+    <p className="text-xs text-gray-500 mt-3">
+      Loading...
+    </p>
+  ) : resourceShares.length === 0 ? (
+    <p className="text-xs text-gray-500 mt-3">
+      No one else has access yet.
+    </p>
+  ) : (
+    <div className="mt-3 space-y-2">
+
+      {resourceShares.map((share) => (
+        <div
+          key={share.id}
+          className="
+            flex
+            items-center
+            justify-between
+            gap-3
+            rounded-xl
+            border
+            border-white/10
+            bg-white/[0.03]
+            p-3
+          "
+        >
+
+          <div className="min-w-0">
+            <p className="text-sm text-gray-300 truncate">
+              {share.email ||
+               share.granteeEmail ||
+               share.user?.email ||
+               "Shared user"}
+            </p>
+
+            <p className="text-xs text-gray-600 mt-1">
+              {share.role}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+
+            <select
+              value={share.role}
+              onChange={async (e) => {
+                try {
+                  const newRole = e.target.value;
+
+                  await updateShare(
+                    share.id,
+                    newRole
+                  );
+
+                  await loadResourceShares(
+                    shareFile.id
+                  );
+
+                } catch (error) {
+                  console.error(
+                    "Update share error:",
+                    error
+                  );
+
+                  setShareMessage(
+                    error.message ||
+                    "Failed to update permission."
+                  );
+                }
+              }}
+              className="
+                rounded-lg
+                border
+                border-white/10
+                bg-[#120b1c]
+                px-2
+                py-2
+                text-xs
+                text-gray-300
+                outline-none
+              "
+            >
+              <option value="viewer">
+                Viewer
+              </option>
+
+              <option value="editor">
+                Editor
+              </option>
+            </select>
+
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await deleteShare(share.id);
+
+                  await loadResourceShares(
+                    shareFile.id
+                  );
+
+                  setShareMessage(
+                    "Access removed."
+                  );
+
+                } catch (error) {
+                  console.error(
+                    "Delete share error:",
+                    error
+                  );
+
+                  setShareMessage(
+                    error.message ||
+                    "Failed to remove access."
+                  );
+                }
+              }}
+              className="
+                rounded-lg
+                px-2
+                py-2
+                text-xs
+                text-red-300
+                hover:bg-red-400/10
+              "
+            >
+              Remove
+            </button>
+
+          </div>
+
+        </div>
+      ))}
+
+    </div>
+  )}
+
+</div>
+
+
+        {/* DIVIDER */}
+
+        <div className="
+          flex
+          items-center
+          gap-3
+          my-6
+        ">
+
+          <div className="flex-1 h-px bg-white/10" />
+
+          <span className="text-xs text-gray-600">
+            OR
+          </span>
+
+          <div className="flex-1 h-px bg-white/10" />
+
+        </div>
+
+
+        {/* PUBLIC LINK */}
+
+        <div>
+
+          <p className="text-sm font-medium text-gray-300">
+            Public link
+          </p>
+
+          <p className="text-xs text-gray-600 mt-1">
+            Create a link that can be shared with anyone.
+          </p>
+
+          <button
+  type="button"
+  disabled={creatingPublicLink}
+  onClick={async () => {
+    try {
+      if (!shareFile?.id) {
+        setShareMessage("No file selected.");
+        return;
+      }
+
+      setCreatingPublicLink(true);
+      setShareMessage("");
+
+      const response = await createPublicLink(
+        "file",
+        shareFile.id
+      );
+
+      const link =
+        response?.link ||
+        response?.publicLink ||
+        response?.url;
+
+      if (!link) {
+        throw new Error("Public link was not returned.");
+      }
+
+      setPublicLink(link);
+
+      setPublicLinkId(
+  response?.share?.id || null
+);
+      setShareMessage("Public link created successfully.");
+    } catch (error) {
+      console.error("Public link error:", error);
+
+      setShareMessage(
+        error.message || "Failed to create public link."
+      );
+    } finally {
+      setCreatingPublicLink(false);
+    }
+  }}
+  className="
+    w-full
+    h-11
+    mt-3
+    rounded-xl
+    border
+    border-fuchsia-400/20
+    bg-fuchsia-400/[0.05]
+    text-fuchsia-200
+    text-sm
+    font-semibold
+    hover:bg-fuchsia-400/[0.1]
+    transition
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+  "
+>
+  {creatingPublicLink
+    ? "Creating link..."
+    : "Create public link"}
+</button>
+
+{publicLink && (
+  <div className="mt-4 space-y-3">
+
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <p className="text-xs text-gray-500 mb-2">
+        Public link
+      </p>
+
+      <p className="text-sm text-gray-300 break-all">
+        {publicLink}
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(publicLink);
+          setShareMessage("Link copied to clipboard.");
+        } catch (error) {
+          console.error("Copy error:", error);
+          setShareMessage("Failed to copy link.");
+        }
+      }}
+      className="
+        w-full
+        h-10
+        rounded-xl
+        border
+        border-white/10
+        bg-white/[0.03]
+        text-gray-300
+        text-sm
+        font-semibold
+        hover:bg-white/[0.08]
+        transition
+      "
+    >
+      Copy link
+    </button>
+
+    {publicLinkId && (
+  <button
+    type="button"
+    onClick={async () => {
+      try {
+        await deletePublicLink(
+          publicLinkId
+        );
+
+        setPublicLink("");
+        setPublicLinkId(null);
+
+        setShareMessage(
+          "Public link revoked."
+        );
+
+      } catch (error) {
+        console.error(
+          "Revoke public link error:",
+          error
+        );
+
+        setShareMessage(
+          error.message ||
+          "Failed to revoke public link."
+        );
+      }
+    }}
+    className="
+      w-full
+      h-10
+      rounded-xl
+      border
+      border-red-400/20
+      bg-red-400/[0.05]
+      text-red-300
+      text-sm
+      font-semibold
+      hover:bg-red-400/[0.1]
+      transition
+    "
+  >
+    Revoke public link
+  </button>
+)}
+
+  </div>
+)}
+
+
+        </div>
 
       </div>
 
