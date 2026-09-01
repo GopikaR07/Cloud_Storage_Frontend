@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -45,6 +44,7 @@ deletePublicLink,
    getUserByEmail,
   shareResource,
   getSharedFiles,
+  searchFiles,
 
 } from "../api";
 
@@ -84,6 +84,17 @@ const [creatingPublicLink, setCreatingPublicLink] = useState(false);
 const [publicLinkId, setPublicLinkId] = useState(null);
 
   const [search, setSearch] = useState("");
+
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const [searchType, setSearchType] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  const searchCache = useRef(new Map());
 
   const [loading, setLoading] = useState(true);
 
@@ -395,48 +406,110 @@ setStorageUsed(totalBytes);
   // SEARCH
   // ==========================================
 
-  const filteredFiles =
-    useMemo(() => {
+  const isSearching = search.trim().length > 0;
 
-      const query =
-        search
-          .trim()
-          .toLowerCase();
+  async function performSearch(query, page = 1, append = false) {
+    const trimmedQuery = query.trim();
 
-      if (!query) {
-        return files;
+    if (!trimmedQuery) {
+      setSearchResults([]);
+      setSearchHasMore(false);
+      setSearchError("");
+      return;
+    }
+
+    const cacheKey = JSON.stringify({
+      query: trimmedQuery.toLowerCase(),
+      page,
+      type: searchType,
+      sort: sortBy,
+      order: sortOrder,
+    });
+
+    if (searchCache.current.has(cacheKey)) {
+      const cached = searchCache.current.get(cacheKey);
+
+      setSearchResults((previous) =>
+        append ? [...previous, ...cached.results] : cached.results
+      );
+      setSearchHasMore(cached.hasMore);
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      setSearchError("");
+
+      const response = await searchFiles(trimmedQuery, {
+        page,
+        limit: 10,
+        type: searchType,
+        sort: sortBy,
+        order: sortOrder,
+      });
+
+      searchCache.current.set(cacheKey, response);
+
+      setSearchResults((previous) =>
+        append
+          ? [...previous, ...(response.results || [])]
+          : response.results || []
+      );
+      setSearchHasMore(response.hasMore || false);
+
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchError(error.message || "Search failed.");
+
+      if (!append) {
+        setSearchResults([]);
       }
 
-      return files.filter(
-        (file) =>
-          (file.name || "")
-            .toLowerCase()
-            .includes(query)
-      );
+    } finally {
+      setSearchLoading(false);
+    }
+  }
 
-    }, [files, search]);
+  useEffect(() => {
+    const query = search.trim();
 
+    if (!query) {
+      setSearchResults([]);
+      setSearchPage(1);
+      setSearchHasMore(false);
+      setSearchError("");
+      return;
+    }
 
-  const filteredFolders =
-    useMemo(() => {
+    const timer = setTimeout(() => {
+      setSearchPage(1);
+      performSearch(query, 1, false);
+    }, 300);
 
-      const query =
-        search
-          .trim()
-          .toLowerCase();
+    return () => clearTimeout(timer);
 
-      if (!query) {
-        return folders;
-      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, searchType, sortBy, sortOrder]);
 
-      return folders.filter(
-        (folder) =>
-          (folder.name || "")
-            .toLowerCase()
-            .includes(query)
-      );
+  async function loadMoreSearchResults() {
+    if (searchLoading || !searchHasMore) {
+      return;
+    }
 
-    }, [folders, search]);
+    const nextPage = searchPage + 1;
+
+    await performSearch(search, nextPage, true);
+
+    setSearchPage(nextPage);
+  }
+
+  const displayedSearchFolders = searchResults.filter(
+    (item) => item.resource_type === "folder"
+  );
+
+  const displayedSearchFiles = searchResults.filter(
+    (item) => item.resource_type === "file"
+  );
 
 
   // ==========================================
@@ -1437,10 +1510,10 @@ setStorageUsed(totalBytes);
                     <div>
 
                       <h2 className="text-xl font-bold">
-                        {active === "folders"
-                          ? "Folders"
-                          : active === "search"
+                        {isSearching
                           ? "Search Results"
+                          : active === "folders"
+                          ? "Folders"
                           : "My Files"}
                       </h2>
 
@@ -1451,7 +1524,82 @@ setStorageUsed(totalBytes);
                     </div>
 
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+
+                      {isSearching && (
+                        <>
+                          <select
+                            value={searchType}
+                            onChange={(e) => {
+                              setSearchType(e.target.value);
+                              setSearchPage(1);
+                            }}
+                            className="
+                              h-10
+                              rounded-xl
+                              border
+                              border-white/10
+                              bg-[#100b17]
+                              px-3
+                              text-sm
+                              text-gray-300
+                              outline-none
+                            "
+                          >
+                            <option value="all">All</option>
+                            <option value="file">Files</option>
+                            <option value="folder">Folders</option>
+                          </select>
+
+                          <select
+                            value={sortBy}
+                            onChange={(e) => {
+                              setSortBy(e.target.value);
+                              setSearchPage(1);
+                            }}
+                            className="
+                              h-10
+                              rounded-xl
+                              border
+                              border-white/10
+                              bg-[#100b17]
+                              px-3
+                              text-sm
+                              text-gray-300
+                              outline-none
+                              focus:border-fuchsia-400/40
+                            "
+                          >
+                            <option value="name">Name</option>
+                            <option value="size">Size</option>
+                            <option value="date">Date</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSortOrder(
+                                sortOrder === "asc" ? "desc" : "asc"
+                              );
+                              setSearchPage(1);
+                            }}
+                            className="
+                              h-10
+                              px-3
+                              rounded-xl
+                              border
+                              border-white/10
+                              text-sm
+                              text-gray-400
+                              hover:text-lime-300
+                              hover:border-lime-300/25
+                              transition
+                            "
+                          >
+                            {sortOrder === "asc" ? "↑ Asc" : "↓ Desc"}
+                          </button>
+                        </>
+                      )}
 
                       <button
                         type="button"
@@ -1600,16 +1748,70 @@ setStorageUsed(totalBytes);
                   )}
 
 
+                  {/* SEARCHING */}
+
+                  {isSearching &&
+                    searchLoading &&
+                    searchResults.length === 0 && (
+
+                    <div className="py-16 text-center text-gray-600">
+
+                      <RefreshCw
+                        size={22}
+                        className="mx-auto animate-spin mb-3"
+                      />
+
+                      Searching your files...
+
+                    </div>
+
+                  )}
+
+
+                  {/* SEARCH ERROR */}
+
+                  {isSearching &&
+                    !searchLoading &&
+                    searchError && (
+
+                    <div className="py-12 text-center">
+
+                      <AlertCircle
+                        size={26}
+                        className="mx-auto text-fuchsia-400 mb-3"
+                      />
+
+                      <p className="text-gray-300 font-medium">
+                        Search failed
+                      </p>
+
+                      <p className="text-sm text-gray-600 mt-2">
+                        {searchError}
+                      </p>
+
+                    </div>
+
+                  )}
+
+
                   {/* EMPTY */}
 
                   {!loading &&
                     !error &&
+                    !searchError &&
 
                     (
-                      active === "folders"
-                        ? filteredFolders.length === 0
-                        : filteredFolders.length === 0 &&
-                          filteredFiles.length === 0
+                      isSearching
+                        ? (
+                            !searchLoading &&
+                            searchResults.length === 0
+                          )
+                        : (
+                            active === "folders"
+                              ? folders.length === 0
+                              : folders.length === 0 &&
+                                files.length === 0
+                          )
                     ) && (
 
                     <div className="py-16 text-center">
@@ -1621,7 +1823,7 @@ setStorageUsed(totalBytes);
 
                       <p className="text-gray-300 font-medium">
 
-                        {search
+                        {isSearching
                           ? "No matching files or folders"
                           : active === "folders"
                           ? "No folders yet"
@@ -1631,7 +1833,7 @@ setStorageUsed(totalBytes);
 
                       <p className="text-sm text-gray-600 mt-2">
 
-                        {search
+                        {isSearching
                           ? "Try a different search term."
                           : "Your uploaded files and folders will appear here."}
 
@@ -1645,81 +1847,191 @@ setStorageUsed(totalBytes);
                   {/* DATA */}
 
                   {!loading &&
-                    !error && (
+                    !error &&
+                    !searchError &&
+                    !(isSearching && searchLoading && searchResults.length === 0) && (
 
                     <div className="space-y-8">
 
+                      {isSearching ? (
 
-                      {/* FOLDERS */}
+                        <>
 
-                      {filteredFolders.length > 0 && (
+                          {/* SEARCH FOLDERS */}
 
-                        <section>
+                          {displayedSearchFolders.length > 0 && (
 
-                          <h3 className="text-sm font-semibold text-gray-400 mb-3">
-                            Folders
-                          </h3>
+                            <section>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                              <h3 className="text-sm font-semibold text-gray-400 mb-3">
+                                Folders
+                              </h3>
 
-                            {filteredFolders.map(
-                              (folder) => (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
 
-                                <FolderCard
-                                  key={
-                                    folder.id
-                                  }
-                                  folder={
-                                    folder
-                                  }
-                                  onOpen={
-                                    openFolder
-                                  }
-                                />
+                                {displayedSearchFolders.map(
+                                  (folder) => (
 
-                              )
-                            )}
+                                    <FolderCard
+                                      key={folder.id}
+                                      folder={folder}
+                                      onOpen={openFolder}
+                                    />
 
-                          </div>
+                                  )
+                                )}
 
-                        </section>
+                              </div>
 
-                      )}
+                            </section>
+
+                          )}
 
 
-                      {/* FILES */}
+                          {/* SEARCH FILES */}
 
-                      {active !== "folders" &&
-                        filteredFiles.length > 0 && (
+                          {displayedSearchFiles.length > 0 && (
 
-                        <section>
+                            <section>
 
-                          <h3 className="text-sm font-semibold text-gray-400 mb-3">
-                            Files
-                          </h3>
+                              <h3 className="text-sm font-semibold text-gray-400 mb-3">
+                                Files
+                              </h3>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
 
-                            {filteredFiles.map(
-                              (file) => (
+                                {displayedSearchFiles.map(
+                                  (file) => (
 
-                                <FileCard
-                                  key={
-                                    file.id
-                                  }
-                                  file={
-                                    file
-                                  }
-                                    onPreview={openPreview}
-                                    onShare={openShare}
-                                />
+                                    <FileCard
+                                      key={file.id}
+                                      file={file}
+                                      onPreview={openPreview}
+                                      onShare={openShare}
+                                    />
 
-                              )
-                            )}
+                                  )
+                                )}
 
-                          </div>
+                              </div>
 
-                        </section>
+                            </section>
+
+                          )}
+
+
+                          {/* LOAD MORE */}
+
+                          {searchResults.length > 0 &&
+                            searchHasMore && (
+
+                            <div className="flex justify-center pt-4">
+
+                              <button
+                                type="button"
+                                onClick={loadMoreSearchResults}
+                                disabled={searchLoading}
+                                className="
+                                  px-5
+                                  py-2.5
+                                  rounded-xl
+                                  border
+                                  border-white/10
+                                  text-sm
+                                  text-gray-300
+                                  hover:text-lime-300
+                                  hover:border-lime-300/25
+                                  disabled:opacity-50
+                                  transition
+                                "
+                              >
+                                {searchLoading ? "Loading..." : "Load more"}
+                              </button>
+
+                            </div>
+
+                          )}
+
+                        </>
+
+                      ) : (
+
+                        <>
+
+                          {/* FOLDERS */}
+
+                          {folders.length > 0 && (
+
+                            <section>
+
+                              <h3 className="text-sm font-semibold text-gray-400 mb-3">
+                                Folders
+                              </h3>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+
+                                {folders.map(
+                                  (folder) => (
+
+                                    <FolderCard
+                                      key={
+                                        folder.id
+                                      }
+                                      folder={
+                                        folder
+                                      }
+                                      onOpen={
+                                        openFolder
+                                      }
+                                    />
+
+                                  )
+                                )}
+
+                              </div>
+
+                            </section>
+
+                          )}
+
+
+                          {/* FILES */}
+
+                          {active !== "folders" &&
+                            files.length > 0 && (
+
+                            <section>
+
+                              <h3 className="text-sm font-semibold text-gray-400 mb-3">
+                                Files
+                              </h3>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+
+                                {files.map(
+                                  (file) => (
+
+                                    <FileCard
+                                      key={
+                                        file.id
+                                      }
+                                      file={
+                                        file
+                                      }
+                                        onPreview={openPreview}
+                                        onShare={openShare}
+                                    />
+
+                                  )
+                                )}
+
+                              </div>
+
+                            </section>
+
+                          )}
+
+                        </>
 
                       )}
 

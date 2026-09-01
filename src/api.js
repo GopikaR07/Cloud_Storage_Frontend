@@ -331,13 +331,21 @@ export async function deleteFile(fileId) {
 
 export async function searchFiles(
   query,
-  page = 1,
-  limit = 10
+  {
+    page = 1,
+    limit = 10,
+    type = "all",
+    sort = "date",
+    order = "desc",
+  } = {}
 ) {
   const params = new URLSearchParams({
     q: query,
     page: String(page),
     limit: String(limit),
+    type,
+    sort,
+    order,
   });
 
   return request(
