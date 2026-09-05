@@ -50,7 +50,7 @@ src/
 ### Setup
 
 ```bash
-git clone <this-repo-url>
+git clone https://github.com/GopikaR07/Cloud_Storage_Frontend.git
 cd Cloud_Storage_Frontend
 npm install
 ```
