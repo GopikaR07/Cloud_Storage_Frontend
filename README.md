@@ -1,16 +1,81 @@
-# React + Vite
+# CloudNova — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+CloudNova is a cloud storage web app (like a mini Google Drive) — upload, organize into folders, search, share links, and restore from trash. This repo is the **frontend**, built with React + Vite + Tailwind CSS. It talks to a separate backend API (repo linked below).
 
-Currently, two official plugins are available:
+🔗 Backend repo: [(https://github.com/GopikaR07/Cloud_Storage_Backend.git) <!-- add link once you share it -->]
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## React Compiler
+<img width="1887" height="856" alt="image" src="https://github.com/user-attachments/assets/94cdfe56-7d73-4158-9134-645c3d41f0d2" />
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+<img width="1906" height="952" alt="image" src="https://github.com/user-attachments/assets/c909866b-bbe0-46fd-82e8-bda674913820" />
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Features
+
+- **Auth** — Login / Signup pages
+- **My Files** — browse files and folders, breadcrumb navigation
+- **Folders** — create, navigate into, and organize nested folders
+- **Upload** — drag-and-drop upload with progress
+- **File versions** — view/restore previous versions of a file
+- **Search** — search across your files
+- **Share** — generate shareable public links (`/shared/:token`) for files
+- **Trash** — soft-delete files/folders, restore or permanently delete
+
+## Tech Stack
+
+- [React 19](https://react.dev/) + [Vite](https://vitejs.dev/)
+- [Tailwind CSS 4](https://tailwindcss.com/)
+- [React Router](https://reactrouter.com/)
+- [lucide-react](https://lucide.dev/) for icons
+
+## Project Structure
+
+```
+src/
+├── api.js              # API base config
+├── App.jsx             # routes
+├── pages/              # Login, Signup, Dashboard, SharedLink
+├── components/         # Sidebar, Header, FileCard, FolderCard, UploadDropzone, etc.
+├── services/           # API calls
+└── assets/
+```
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- The [backend](#) running locally or deployed
+
+### Setup
+
+```bash
+git clone <this-repo-url>
+cd Cloud_Storage_Frontend
+npm install
+```
+
+Create a `.env` file in the root:
+
+```
+VITE_API_URL=http://localhost:5000   # or your deployed backend URL
+```
+
+Run the dev server:
+
+```bash
+npm run dev
+```
+
+### Other scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint |
+
+## License
+
+This project is for personal/academic use.
