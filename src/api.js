@@ -476,3 +476,75 @@ export async function verifyPublicLinkPassword(token, password) {
     body: JSON.stringify({ password }),
   });
 }
+
+/* =========================================================
+   TRASH
+========================================================= */
+
+export async function getTrash() {
+  return request("/api/trash");
+}
+
+export async function restoreFile(fileId) {
+  return request(
+    `/api/trash/files/${encodeURIComponent(fileId)}/restore`,
+    { method: "PATCH" }
+  );
+}
+
+export async function permanentlyDeleteFile(fileId) {
+  return request(
+    `/api/trash/files/${encodeURIComponent(fileId)}`,
+    { method: "DELETE" }
+  );
+}
+
+export async function restoreFolder(folderId) {
+  return request(
+    `/api/trash/folders/${encodeURIComponent(folderId)}/restore`,
+    { method: "PATCH" }
+  );
+}
+
+export async function permanentlyDeleteFolder(folderId) {
+  return request(
+    `/api/trash/folders/${encodeURIComponent(folderId)}`,
+    { method: "DELETE" }
+  );
+}
+
+/* =========================================================
+   FILE VERSIONS
+========================================================= */
+
+export async function getFileVersions(fileId) {
+  return request(
+    `/api/versions/${encodeURIComponent(fileId)}`
+  );
+}
+
+export async function uploadFileVersion(fileId, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request(
+    `/api/versions/${encodeURIComponent(fileId)}`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+}
+
+export async function downloadFileVersion(fileId, versionId) {
+  return request(
+    `/api/versions/${encodeURIComponent(fileId)}/${encodeURIComponent(versionId)}/download`
+  );
+}
+
+export async function restoreFileVersion(fileId, versionId) {
+  return request(
+    `/api/versions/${encodeURIComponent(fileId)}/${encodeURIComponent(versionId)}/restore`,
+    { method: "PATCH" }
+  );
+}

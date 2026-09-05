@@ -17,6 +17,9 @@ import {
   Share2,
   Search,
   LogOut,
+  Trash2,
+  RotateCcw,
+  History,
   Menu,
   X,
   ChevronRight,
@@ -29,6 +32,7 @@ import FileCard from "../components/FileCard";
 import FolderCard from "../components/FolderCard";
 import Breadcrumbs from "../components/Breadcrumbs";
 import UploadDropzone from "../components/UploadDropzone";
+import VersionModal from "../components/VersionModal";
 
 import {
   getCurrentUser,
@@ -45,6 +49,11 @@ deletePublicLink,
   shareResource,
   getSharedFiles,
   searchFiles,
+  getTrash,
+  restoreFile,
+  permanentlyDeleteFile,
+  restoreFolder,
+  permanentlyDeleteFolder,
 
 } from "../api";
 
@@ -113,6 +122,12 @@ const [publicLinkId, setPublicLinkId] = useState(null);
 
   const [previewFile, setPreviewFile] =
   useState(null);
+
+  const [versionFile, setVersionFile] = useState(null);
+  const [trashFiles, setTrashFiles] = useState([]);
+  const [trashFolders, setTrashFolders] = useState([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  const [trashError, setTrashError] = useState("");
 
     function openPreview(file) {
   setPreviewFile(file);
@@ -538,6 +553,70 @@ setStorageUsed(totalBytes);
 
 
   // ==========================================
+  // DAY 13 - TRASH
+  // ==========================================
+
+  async function loadTrash() {
+    setTrashLoading(true);
+    setTrashError("");
+
+    try {
+      const response = await getTrash();
+      setTrashFiles(response?.files || []);
+      setTrashFolders(response?.folders || []);
+    } catch (error) {
+      console.error("Load trash error:", error);
+      setTrashError(error.message || "Could not load trash.");
+    } finally {
+      setTrashLoading(false);
+    }
+  }
+
+  async function handleRestoreFile(fileId) {
+    try {
+      await restoreFile(fileId);
+      await loadTrash();
+      await loadRoot();
+    } catch (error) {
+      alert(error.message || "Failed to restore file.");
+    }
+  }
+
+  async function handlePermanentDeleteFile(fileId) {
+    if (!window.confirm("Permanently delete this file? This cannot be undone.")) return;
+    try {
+      await permanentlyDeleteFile(fileId);
+      await loadTrash();
+    } catch (error) {
+      alert(error.message || "Failed to permanently delete file.");
+    }
+  }
+
+  async function handleRestoreFolder(folderId) {
+    try {
+      await restoreFolder(folderId);
+      await loadTrash();
+      await loadRoot();
+    } catch (error) {
+      alert(error.message || "Failed to restore folder.");
+    }
+  }
+
+  async function handlePermanentDeleteFolder(folderId) {
+    if (!window.confirm("Permanently delete this folder and its contents? This cannot be undone.")) return;
+    try {
+      await permanentlyDeleteFolder(folderId);
+      await loadTrash();
+    } catch (error) {
+      alert(error.message || "Failed to permanently delete folder.");
+    }
+  }
+
+  function openVersions(file) {
+    setVersionFile(file);
+  }
+
+  // ==========================================
   // SIDEBAR NAVIGATION
   // ==========================================
 
@@ -614,6 +693,13 @@ setStorageUsed(totalBytes);
       Shared:
       Placeholder for Day 11.
     */
+
+    if (id === "trash") {
+      setSearch("");
+      loadTrash();
+      return;
+    }
+
 
     if (id === "shared") {
 
@@ -763,6 +849,12 @@ setStorageUsed(totalBytes);
             id="search"
             label="Search"
             icon={Search}
+          />
+
+          <NavItem
+            id="trash"
+            label="Trash"
+            icon={Trash2}
           />
 
         </div>
@@ -1088,7 +1180,8 @@ setStorageUsed(totalBytes);
             ================================== */}
 
             {active !== "dashboard" &&
-              active !== "shared" && (
+              active !== "shared" &&
+              active !== "trash" && (
 
               <div className="mb-7">
 
@@ -1376,6 +1469,100 @@ setStorageUsed(totalBytes);
 
 
             {/* =================================
+                TRASH
+            ================================== */}
+
+            {active === "trash" && (
+              <div className="rounded-2xl border border-white/10 bg-[#0d0717] overflow-hidden">
+                <div className="px-5 sm:px-7 py-5 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Trash2 size={22} className="text-fuchsia-300" />
+                    <div>
+                      <h2 className="text-xl font-bold">Trash</h2>
+                      <p className="text-sm text-gray-600 mt-1">Restore deleted items or permanently delete them.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-7">
+                  {trashLoading && (
+                    <div className="py-16 text-center text-gray-600">
+                      <RefreshCw size={22} className="mx-auto animate-spin mb-3" />
+                      Loading trash...
+                    </div>
+                  )}
+
+                  {!trashLoading && trashError && (
+                    <div className="py-12 text-center">
+                      <AlertCircle size={26} className="mx-auto text-fuchsia-400 mb-3" />
+                      <p className="text-gray-300">Could not load trash</p>
+                      <p className="text-sm text-gray-600 mt-2">{trashError}</p>
+                      <button type="button" onClick={loadTrash} className="mt-5 px-4 py-2.5 rounded-xl bg-lime-300 text-black font-semibold text-sm">Try again</button>
+                    </div>
+                  )}
+
+                  {!trashLoading && !trashError && (
+                    <div className="space-y-8">
+                      {trashFolders.length > 0 && (
+                        <section>
+                          <h3 className="text-sm font-semibold text-gray-400 mb-3">Folders</h3>
+                          <div className="space-y-2">
+                            {trashFolders.map((folder) => (
+                              <div key={folder.id} className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <Folder size={20} className="text-lime-300 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-gray-200 truncate">{folder.name}</p>
+                                    <p className="text-xs text-gray-600">Deleted folder</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button type="button" onClick={() => handleRestoreFolder(folder.id)} className="px-3 py-2 rounded-lg border border-lime-300/20 text-lime-300 text-xs hover:bg-lime-300/[0.06]">Restore</button>
+                                  <button type="button" onClick={() => handlePermanentDeleteFolder(folder.id)} className="px-3 py-2 rounded-lg border border-red-400/20 text-red-300 text-xs hover:bg-red-400/[0.06]">Delete forever</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {trashFiles.length > 0 && (
+                        <section>
+                          <h3 className="text-sm font-semibold text-gray-400 mb-3">Files</h3>
+                          <div className="space-y-2">
+                            {trashFiles.map((file) => (
+                              <div key={file.id} className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <Files size={20} className="text-fuchsia-300 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-gray-200 truncate">{file.name}</p>
+                                    <p className="text-xs text-gray-600">Deleted file</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button type="button" onClick={() => handleRestoreFile(file.id)} className="px-3 py-2 rounded-lg border border-lime-300/20 text-lime-300 text-xs hover:bg-lime-300/[0.06]">Restore</button>
+                                  <button type="button" onClick={() => handlePermanentDeleteFile(file.id)} className="px-3 py-2 rounded-lg border border-red-400/20 text-red-300 text-xs hover:bg-red-400/[0.06]">Delete forever</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {trashFiles.length === 0 && trashFolders.length === 0 && (
+                        <div className="py-16 text-center">
+                          <Trash2 size={38} className="mx-auto text-gray-700 mb-4" />
+                          <p className="text-gray-300 font-medium">Trash is empty</p>
+                          <p className="text-sm text-gray-600 mt-2">Deleted files and folders will appear here.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* =================================
                 DASHBOARD STORAGE
             ================================== */}
 
@@ -1496,7 +1683,7 @@ setStorageUsed(totalBytes);
                 FILE EXPLORER
             ================================== */}
 
-            {active !== "shared" && (
+            {active !== "shared" && active !== "trash" && (
 
               <div className="rounded-2xl border border-white/10 bg-[#0d0717] overflow-hidden">
 
@@ -1908,6 +2095,7 @@ setStorageUsed(totalBytes);
                                       file={file}
                                       onPreview={openPreview}
                                       onShare={openShare}
+                                      onVersions={openVersions}
                                     />
 
                                   )
@@ -2020,6 +2208,7 @@ setStorageUsed(totalBytes);
                                       }
                                         onPreview={openPreview}
                                         onShare={openShare}
+                                        onVersions={openVersions}
                                     />
 
                                   )
@@ -2313,6 +2502,16 @@ setStorageUsed(totalBytes);
   </div>
 
 )}
+    {versionFile && (
+      <VersionModal
+        file={versionFile}
+        onClose={() => setVersionFile(null)}
+        onChanged={async () => {
+          await loadRoot();
+        }}
+      />
+    )}
+
     {shareFile && (
 
   <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">

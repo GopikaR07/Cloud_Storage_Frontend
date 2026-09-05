@@ -5,7 +5,8 @@ import {
   FileType,
   Download,
   Eye,
-  Share2
+  Share2,
+  History
 } from "lucide-react";
 
 function getFileType(file) {
@@ -77,6 +78,7 @@ function FileCard({
   file,
   onPreview,
   onShare,
+  onVersions,
 }) {
 
   const type =
@@ -211,6 +213,33 @@ function FileCard({
     <span className="text-xs text-gray-600">
       Click to preview
     </span>
+
+    {onVersions && (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onVersions(file);
+        }}
+        className="
+          flex
+          items-center
+          gap-1.5
+          px-2.5
+          py-1.5
+          rounded-lg
+          border
+          border-white/10
+          text-gray-500
+          hover:text-fuchsia-300
+          hover:border-fuchsia-300/20
+          transition
+        "
+      >
+        <History size={14} />
+        <span className="text-xs">Versions</span>
+      </button>
+    )}
 
     <button
       type="button"
