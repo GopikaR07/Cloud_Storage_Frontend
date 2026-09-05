@@ -3,10 +3,9 @@ import {
   FileText,
   FileImage,
   FileType,
-  Download,
   Eye,
   Share2,
-  History
+  History,
 } from "lucide-react";
 
 function getFileType(file) {
@@ -17,23 +16,16 @@ function getFileType(file) {
     return "image";
   }
 
-  if (
-    mime === "application/pdf" ||
-    name.toLowerCase().endsWith(".pdf")
-  ) {
+  if (mime === "application/pdf" || name.toLowerCase().endsWith(".pdf")) {
     return "pdf";
   }
 
-  if (
-    mime.startsWith("text/") ||
-    name.toLowerCase().endsWith(".txt")
-  ) {
+  if (mime.startsWith("text/") || name.toLowerCase().endsWith(".txt")) {
     return "text";
   }
 
   return "other";
 }
-
 
 function formatFileSize(bytes) {
   if (!bytes) return "";
@@ -50,12 +42,8 @@ function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  return `${(
-    bytes /
-    (1024 * 1024 * 1024)
-  ).toFixed(1)} GB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
-
 
 function getIcon(type) {
   if (type === "image") {
@@ -73,36 +61,17 @@ function getIcon(type) {
   return File;
 }
 
-
-function FileCard({
-  file,
-  onPreview,
-  onShare,
-  onVersions,
-}) {
-
-  const type =
-    getFileType(file);
-
-  const Icon =
-    getIcon(type);
-
-  const size =
-    file?.size ||
-    file?.file_size ||
-    file?.size_bytes;
-
+function FileCard({ file, onPreview, onShare, onVersions }) {
+  const type = getFileType(file);
+  const Icon = getIcon(type);
+  const size = file?.size || file?.file_size || file?.size_bytes;
 
   return (
-
     <div
-      
       onClick={() => {
-
         if (onPreview) {
           onPreview(file);
         }
-
       }}
       className="
         group
@@ -119,14 +88,9 @@ function FileCard({
         overflow-hidden
       "
     >
-
       {/* PREVIEW AREA */}
-
       <div className="h-36 flex items-center justify-center bg-[#10091a] relative">
-
-        {type === "image" &&
-        file?.url ? (
-
+        {type === "image" && file?.url ? (
           <img
             src={file.url}
             alt={file.name}
@@ -139,147 +103,198 @@ function FileCard({
               transition
             "
           />
-
         ) : (
-
-          <div className="
-            w-16
-            h-16
-            rounded-2xl
-            bg-fuchsia-400/[0.07]
-            border
-            border-fuchsia-400/15
-            flex
-            items-center
-            justify-center
-          ">
-
-            <Icon
-              size={30}
-              className="text-fuchsia-300"
-            />
-
+          <div
+            className="
+              w-16
+              h-16
+              rounded-2xl
+              bg-fuchsia-400/[0.07]
+              border
+              border-fuchsia-400/15
+              flex
+              items-center
+              justify-center
+            "
+          >
+            <Icon size={30} className="text-fuchsia-300" />
           </div>
-
         )}
 
+        {/* FILE ACTIONS - ALWAYS VISIBLE */}
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {onVersions && (
+            <button
+              type="button"
+              title="View versions"
+              aria-label={`View versions of ${file?.name || "file"}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onVersions(file);
+              }}
+              className="
+                w-9
+                h-9
+                rounded-lg
+                bg-black/70
+                border
+                border-white/15
+                flex
+                items-center
+                justify-center
+                text-gray-300
+                hover:text-fuchsia-300
+                hover:border-fuchsia-300/40
+                hover:bg-black/85
+                transition
+                shadow-lg
+              "
+            >
+              <History size={16} />
+            </button>
+          )}
 
-        {/* VIEW ICON */}
+          {onShare && (
+            <button
+              type="button"
+              title="Share file"
+              aria-label={`Share ${file?.name || "file"}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onShare(file);
+              }}
+              className="
+                w-9
+                h-9
+                rounded-lg
+                bg-black/70
+                border
+                border-lime-300/30
+                flex
+                items-center
+                justify-center
+                text-lime-300
+                hover:text-lime-200
+                hover:border-lime-300/60
+                hover:bg-black/85
+                transition
+                shadow-lg
+              "
+            >
+              <Share2 size={16} />
+            </button>
+          )}
 
-        <div className="
-          absolute
-          top-3
-          right-3
-          w-8
-          h-8
-          rounded-lg
-          bg-black/60
-          border
-          border-white/10
-          flex
-          items-center
-          justify-center
-          opacity-0
-          group-hover:opacity-100
-          transition
-        ">
-
-          <Eye
-            size={15}
-            className="text-white"
-          />
-
+          {/* PREVIEW */}
+          <button
+            type="button"
+            title="Preview file"
+            aria-label={`Preview ${file?.name || "file"}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (onPreview) {
+                onPreview(file);
+              }
+            }}
+            className="
+              w-9
+              h-9
+              rounded-lg
+              bg-black/70
+              border
+              border-white/15
+              flex
+              items-center
+              justify-center
+              text-white
+              hover:text-fuchsia-300
+              hover:border-fuchsia-300/40
+              hover:bg-black/85
+              transition
+              shadow-lg
+            "
+          >
+            <Eye size={16} />
+          </button>
         </div>
-
       </div>
 
-
       {/* INFO */}
-
       <div className="px-4 py-3">
+        <p className="text-sm text-gray-200 font-medium truncate">
+          {file?.name || "Unnamed file"}
+        </p>
 
-  <p className="text-sm text-gray-200 font-medium truncate">
-    {file?.name || "Unnamed file"}
-  </p>
+        {size && (
+          <p className="text-xs text-gray-600 mt-1">
+            {formatFileSize(size)}
+          </p>
+        )}
 
-  {size && (
-    <p className="text-xs text-gray-600 mt-1">
-      {formatFileSize(size)}
-    </p>
-  )}
+        <div className="flex items-center justify-between gap-2 mt-3">
+          <span className="text-xs text-gray-600 truncate">
+            Click to preview
+          </span>
 
-  <div className="flex items-center justify-between gap-2 mt-3">
+          <div className="flex items-center gap-2 shrink-0">
+            {onVersions && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onVersions(file);
+                }}
+                className="
+                  flex
+                  items-center
+                  gap-1.5
+                  px-2.5
+                  py-1.5
+                  rounded-lg
+                  border
+                  border-white/10
+                  text-gray-500
+                  hover:text-fuchsia-300
+                  hover:border-fuchsia-300/30
+                  transition
+                "
+              >
+                <History size={14} />
+                <span className="text-xs">Versions</span>
+              </button>
+            )}
 
-    <span className="text-xs text-gray-600">
-      Click to preview
-    </span>
-
-    {onVersions && (
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onVersions(file);
-        }}
-        className="
-          flex
-          items-center
-          gap-1.5
-          px-2.5
-          py-1.5
-          rounded-lg
-          border
-          border-white/10
-          text-gray-500
-          hover:text-fuchsia-300
-          hover:border-fuchsia-300/20
-          transition
-        "
-      >
-        <History size={14} />
-        <span className="text-xs">Versions</span>
-      </button>
-    )}
-
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-
-        if (onShare) {
-          onShare(file);
-        }
-      }}
-      className="
-        flex
-        items-center
-        gap-1.5
-        px-2.5
-        py-1.5
-        rounded-lg
-        border
-        border-white/10
-        text-gray-500
-        hover:text-lime-300
-        hover:border-lime-300/20
-        transition
-      "
-    >
-      <Share2 size={14} />
-
-      <span className="text-xs">
-        Share
-      </span>
-
-    </button>
-
-  </div>
-
-</div>
-
+            {onShare && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onShare(file);
+                }}
+                className="
+                  flex
+                  items-center
+                  gap-1.5
+                  px-2.5
+                  py-1.5
+                  rounded-lg
+                  border
+                  border-lime-300/25
+                  text-lime-300
+                  hover:text-lime-200
+                  hover:border-lime-300/50
+                  transition
+                "
+              >
+                <Share2 size={14} />
+                <span className="text-xs">Share</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
 
 export default FileCard;

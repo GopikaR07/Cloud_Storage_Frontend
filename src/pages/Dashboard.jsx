@@ -783,7 +783,7 @@ setStorageUsed(totalBytes);
 
     return (
 
-      <div className="h-full flex flex-col">
+      <div className="min-h-full flex flex-col">
 
         {/* BRAND */}
 
@@ -926,7 +926,7 @@ setStorageUsed(totalBytes);
 
   return (
 
-    <div className="min-h-screen bg-[#07040d] text-white">
+    <div className="min-h-screen bg-[#07040d] text-white overflow-x-hidden">
 
       {/* =====================================
           DESKTOP SIDEBAR
@@ -945,6 +945,7 @@ setStorageUsed(totalBytes);
           bg-[#090610]
           border-r
           border-white/10
+          overflow-y-auto
         "
       >
 
@@ -986,6 +987,7 @@ setStorageUsed(totalBytes);
               border-r
               border-white/10
               lg:hidden
+              overflow-y-auto
             "
           >
 
