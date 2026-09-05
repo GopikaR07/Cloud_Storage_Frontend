@@ -94,6 +94,11 @@ const [creatingPublicLink, setCreatingPublicLink] = useState(false);
 
 const [publicLinkId, setPublicLinkId] = useState(null);
 
+const [showCreateFolder, setShowCreateFolder] = useState(false);
+const [newFolderName, setNewFolderName] = useState("");
+const [creatingFolder, setCreatingFolder] = useState(false);
+const [folderMessage, setFolderMessage] = useState("");
+
   const [search, setSearch] = useState("");
 
   const [searchResults, setSearchResults] = useState([]);
@@ -170,24 +175,33 @@ async function openSharedFile(file) {
 }
 
 async function handleCreateFolder() {
-  const name = window.prompt("Enter folder name:");
+  const name = newFolderName.trim();
 
-  if (!name || !name.trim()) {
+  if (!name) {
+    setFolderMessage("Please enter a folder name.");
     return;
   }
 
   try {
-    await createFolder(
-      name.trim(),
-      currentFolderId
-    );
+    setCreatingFolder(true);
+    setFolderMessage("");
+
+    await createFolder(name, currentFolderId);
+
+    setNewFolderName("");
+    setShowCreateFolder(false);
 
     await loadRoot();
+
   } catch (error) {
-    alert(
-      error.message ||
-      "Failed to create folder."
+    console.error("Create folder error:", error);
+
+    setFolderMessage(
+      error.message || "Failed to create folder."
     );
+
+  } finally {
+    setCreatingFolder(false);
   }
 }
 
@@ -1839,23 +1853,36 @@ setStorageUsed(totalBytes);
 
                       <button
   type="button"
-  onClick={handleCreateFolder}
+  onClick={() => {
+    setNewFolderName("");
+    setFolderMessage("");
+    setShowCreateFolder(true);
+  }}
   className="
     flex
     items-center
+    justify-center
     gap-2
-    px-3.5
+    min-w-[130px]
+    px-4
     py-2.5
     rounded-xl
     border
-    border-fuchsia-400/20
+    border-fuchsia-400/30
+    bg-fuchsia-400/[0.04]
     text-fuchsia-300
-    hover:bg-fuchsia-400/[0.06]
+    hover:bg-fuchsia-400/[0.10]
+    hover:border-fuchsia-400/50
     transition
+    whitespace-nowrap
   "
 >
-                      
-                      </button>
+  <FolderPlus size={17} />
+
+  <span className="text-sm font-medium">
+    New Folder
+  </span>
+</button>
 
                     </div>
 
@@ -3121,6 +3148,202 @@ setStorageUsed(totalBytes);
 
   </div>
 
+)}
+
+{showCreateFolder && (
+  <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+
+    {/* BACKDROP */}
+    <div
+      className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+      onClick={() => {
+        if (!creatingFolder) {
+          setShowCreateFolder(false);
+        }
+      }}
+    />
+
+    {/* MODAL */}
+    <div
+      className="
+        relative
+        w-full
+        max-w-md
+        rounded-3xl
+        border
+        border-fuchsia-400/20
+        bg-[#0d0717]
+        shadow-[0_0_60px_rgba(217,70,239,0.15)]
+        overflow-hidden
+      "
+    >
+
+      {/* HEADER */}
+      <div className="
+        px-6
+        py-5
+        border-b
+        border-white/10
+        flex
+        items-center
+        justify-between
+      ">
+
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="
+              w-9
+              h-9
+              rounded-xl
+              border
+              border-fuchsia-400/20
+              bg-fuchsia-400/[0.07]
+              flex
+              items-center
+              justify-center
+            ">
+              <FolderPlus
+                size={18}
+                className="text-fuchsia-300"
+              />
+            </div>
+
+            <h2 className="text-lg font-bold text-white">
+              Create new folder
+            </h2>
+          </div>
+
+          <p className="text-sm text-gray-500 mt-2">
+            Organize your files into a new folder.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={creatingFolder}
+          onClick={() => setShowCreateFolder(false)}
+          className="
+            p-2
+            rounded-xl
+            text-gray-500
+            hover:text-white
+            hover:bg-white/[0.05]
+            transition
+            disabled:opacity-50
+          "
+        >
+          <X size={19} />
+        </button>
+
+      </div>
+
+
+      {/* BODY */}
+      <div className="p-6">
+
+        <label className="
+          block
+          text-sm
+          font-medium
+          text-gray-300
+          mb-2
+        ">
+          Folder name
+        </label>
+
+        <input
+          autoFocus
+          type="text"
+          value={newFolderName}
+          onChange={(e) => {
+            setNewFolderName(e.target.value);
+            setFolderMessage("");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !creatingFolder) {
+              handleCreateFolder();
+            }
+
+            if (e.key === "Escape" && !creatingFolder) {
+              setShowCreateFolder(false);
+            }
+          }}
+          placeholder="e.g. College Projects"
+          maxLength={255}
+          className="
+            w-full
+            h-12
+            rounded-xl
+            border
+            border-white/10
+            bg-white/[0.04]
+            px-4
+            text-sm
+            text-white
+            placeholder:text-gray-600
+            outline-none
+            focus:border-fuchsia-400/60
+            focus:ring-2
+            focus:ring-fuchsia-400/10
+            transition
+          "
+        />
+
+        {folderMessage && (
+          <p className="mt-3 text-sm text-pink-300">
+            {folderMessage}
+          </p>
+        )}
+
+        <div className="flex gap-3 mt-6">
+
+          <button
+            type="button"
+            disabled={creatingFolder}
+            onClick={() => setShowCreateFolder(false)}
+            className="
+              flex-1
+              h-12
+              rounded-xl
+              border
+              border-white/10
+              text-gray-400
+              hover:text-white
+              hover:bg-white/[0.04]
+              transition
+              disabled:opacity-50
+            "
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={creatingFolder}
+            onClick={handleCreateFolder}
+            className="
+              flex-1
+              h-12
+              rounded-xl
+              bg-lime-300
+              text-black
+              font-bold
+              hover:bg-lime-200
+              transition
+              disabled:opacity-50
+            "
+          >
+            {creatingFolder
+              ? "Creating..."
+              : "Create Folder"}
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
 )}
 
     </div>
