@@ -6,6 +6,7 @@ import {
   Eye,
   Share2,
   History,
+  Trash2,
 } from "lucide-react";
 
 function getFileType(file) {
@@ -61,7 +62,7 @@ function getIcon(type) {
   return File;
 }
 
-function FileCard({ file, onPreview, onShare, onVersions }) {
+function FileCard({ file, onPreview, onShare, onVersions, onDelete }) {
   const type = getFileType(file);
   const Icon = getIcon(type);
   const size = file?.size || file?.file_size || file?.size_bytes;
@@ -182,6 +183,37 @@ function FileCard({ file, onPreview, onShare, onVersions }) {
               "
             >
               <Share2 size={16} />
+            </button>
+          )}
+
+          {onDelete && (
+            <button
+              type="button"
+              title="Move to trash"
+              aria-label={`Move ${file?.name || "file"} to trash`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete(file);
+              }}
+              className="
+                w-9
+                h-9
+                rounded-lg
+                bg-black/70
+                border
+                border-red-400/30
+                flex
+                items-center
+                justify-center
+                text-red-300
+                hover:text-red-200
+                hover:border-red-400/60
+                hover:bg-black/85
+                transition
+                shadow-lg
+              "
+            >
+              <Trash2 size={16} />
             </button>
           )}
 
