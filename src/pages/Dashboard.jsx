@@ -54,6 +54,8 @@ deletePublicLink,
   permanentlyDeleteFile,
   restoreFolder,
   permanentlyDeleteFolder,
+  createFolder,
+
 
 } from "../api";
 
@@ -163,6 +165,28 @@ async function openSharedFile(file) {
     setShareMessage(
       error.message ||
       "Unable to open shared file."
+    );
+  }
+}
+
+async function handleCreateFolder() {
+  const name = window.prompt("Enter folder name:");
+
+  if (!name || !name.trim()) {
+    return;
+  }
+
+  try {
+    await createFolder(
+      name.trim(),
+      currentFolderId
+    );
+
+    await loadRoot();
+  } catch (error) {
+    alert(
+      error.message ||
+      "Failed to create folder."
     );
   }
 }
@@ -1814,35 +1838,23 @@ setStorageUsed(totalBytes);
 
 
                       <button
-                        type="button"
-                        onClick={() =>
-                          alert(
-                            "Create folder will be implemented in the file-management step."
-                          )
-                        }
-                        className="
-                          flex
-                          items-center
-                          gap-2
-                          px-3.5
-                          py-2.5
-                          rounded-xl
-                          border
-                          border-fuchsia-400/20
-                          text-fuchsia-300
-                          hover:bg-fuchsia-400/[0.06]
-                          transition
-                        "
-                      >
-
-                        <FolderPlus
-                          size={17}
-                        />
-
-                        <span className="text-sm">
-                          New Folder
-                        </span>
-
+  type="button"
+  onClick={handleCreateFolder}
+  className="
+    flex
+    items-center
+    gap-2
+    px-3.5
+    py-2.5
+    rounded-xl
+    border
+    border-fuchsia-400/20
+    text-fuchsia-300
+    hover:bg-fuchsia-400/[0.06]
+    transition
+  "
+>
+                      
                       </button>
 
                     </div>
