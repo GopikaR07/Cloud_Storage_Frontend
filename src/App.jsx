@@ -8,19 +8,21 @@ import SharedLink from "./pages/SharedLink";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Opening the website should show Login */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
+      {/* Authentication */}
       <Route path="/login" element={<Login />} />
-
       <Route path="/signup" element={<Signup />} />
 
+      {/* Main application */}
       <Route path="/dashboard" element={<Dashboard />} />
 
+      {/* Shared files */}
       <Route path="/shared/:token" element={<SharedLink />} />
 
-      {/* Anything unmatched (e.g. a stray double slash) → dashboard
-          instead of a silent blank screen */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Unknown routes go to Login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
