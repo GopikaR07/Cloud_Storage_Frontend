@@ -8,18 +8,20 @@ import SharedLink from "./pages/SharedLink";
 function App() {
   return (
     <Routes>
-      {/* Starting page → LOGIN */}
+      {/* Starting page */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
+      {/* Authentication */}
       <Route path="/login" element={<Login />} />
-
       <Route path="/signup" element={<Signup />} />
 
+      {/* Main application */}
       <Route path="/dashboard" element={<Dashboard />} />
 
+      {/* Shared files */}
       <Route path="/shared/:token" element={<SharedLink />} />
 
-      {/* Unknown URL → LOGIN */}
+      {/* Unknown routes → login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
